@@ -25,6 +25,12 @@ The API starts at:
 http://localhost:8080
 ```
 
+Swagger API docs:
+
+```text
+http://localhost:8080/swagger-ui/index.html
+```
+
 H2 console:
 
 ```text
