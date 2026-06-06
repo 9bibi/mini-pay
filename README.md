@@ -26,6 +26,8 @@ deposits, transfers, balances, and transaction history.
 - Handle API errors with custom exceptions
 - Run API and PostgreSQL with Docker Compose
 - Manage database schema with Flyway migrations
+- Protect payment data with database constraints
+- Expose health status with Spring Boot Actuator
 
 ## Run
 
@@ -45,6 +47,12 @@ Swagger:
 
 ```text
 http://localhost:8081/swagger-ui/index.html
+```
+
+Health check:
+
+```text
+http://localhost:8081/actuator/health
 ```
 
 Stop containers:

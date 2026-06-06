@@ -8,9 +8,14 @@ import com.minipay.dto.TransactionResponse;
 import com.minipay.dto.UserResponse;
 import com.minipay.dto.WalletResponse;
 import com.minipay.exception.InsufficientFundsException;
+import com.minipay.exception.SameWalletTransferException;
+import com.minipay.exception.WalletNotFoundException;
+import com.minipay.model.Transaction;
 import com.minipay.model.TransactionStatus;
+import com.minipay.model.TransactionType;
 import com.minipay.repository.TransactionRepository;
 import java.math.BigDecimal;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -61,5 +66,46 @@ class WalletServiceTest {
                 });
         assertThat(walletService.getBalance(sender.id()).balance()).isEqualByComparingTo("0.00");
         assertThat(walletService.getBalance(receiver.id()).balance()).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    void transferFailsWhenSendingToSameWallet() {
+        UserResponse user = userService.createUser(new CreateUserRequest("Sara", "sara@test.com"));
+        walletService.deposit(user.id(), new BigDecimal("50.00"));
+
+        assertThatThrownBy(() -> walletService.transfer(user.id(), user.id(), new BigDecimal("10.00")))
+                .isInstanceOf(SameWalletTransferException.class)
+                .hasMessage("Cannot transfer money to the same wallet");
+
+        assertThat(transactionRepository.findByFromUserIdOrToUserIdOrderByCreatedAtDesc(user.id(), user.id()))
+                .anySatisfy(transaction -> {
+                    assertThat(transaction.getStatus()).isEqualTo(TransactionStatus.FAILED);
+                    assertThat(transaction.getDescription()).isEqualTo("Cannot transfer money to the same wallet");
+                });
+        assertThat(walletService.getBalance(user.id()).balance()).isEqualByComparingTo("50.00");
+    }
+
+    @Test
+    void balanceFailsWhenWalletDoesNotExist() {
+        assertThatThrownBy(() -> walletService.getBalance(999L))
+                .isInstanceOf(WalletNotFoundException.class)
+                .hasMessage("Wallet not found for user id 999");
+    }
+
+    @Test
+    void transactionHistoryIsReturnedNewestFirst() {
+        UserResponse sender = userService.createUser(new CreateUserRequest("Timur", "timur@test.com"));
+        UserResponse receiver = userService.createUser(new CreateUserRequest("Dana", "dana@test.com"));
+
+        walletService.deposit(sender.id(), new BigDecimal("100.00"));
+        walletService.transfer(sender.id(), receiver.id(), new BigDecimal("20.00"));
+
+        List<Transaction> history = transactionRepository
+                .findByFromUserIdOrToUserIdOrderByCreatedAtDesc(sender.id(), sender.id());
+
+        assertThat(history).hasSize(2);
+        assertThat(history.get(0).getType()).isEqualTo(TransactionType.TRANSFER);
+        assertThat(history.get(1).getType()).isEqualTo(TransactionType.DEPOSIT);
+        assertThat(history.get(0).getCreatedAt()).isAfterOrEqualTo(history.get(1).getCreatedAt());
     }
 }

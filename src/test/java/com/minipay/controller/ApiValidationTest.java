@@ -52,6 +52,27 @@ class ApiValidationTest {
     }
 
     @Test
+    void createUserRejectsDuplicateEmail() throws Exception {
+        String body = """
+                {
+                  "name": "Amina",
+                  "email": "duplicate@example.com"
+                }
+                """;
+
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Email is already registered"));
+    }
+
+    @Test
     void transferRejectsNegativeAmount() throws Exception {
         mockMvc.perform(post("/api/wallets/transfer")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -88,5 +109,12 @@ class ApiValidationTest {
         mockMvc.perform(get("/api/wallets/-1/balance"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Validation failed"));
+    }
+
+    @Test
+    void balanceReturnsNotFoundForMissingWallet() throws Exception {
+        mockMvc.perform(get("/api/wallets/999/balance"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Wallet not found for user id 999"));
     }
 }
