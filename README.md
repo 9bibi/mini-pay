@@ -10,37 +10,62 @@ history.
 - Spring Boot 3
 - Spring Web
 - Spring Data JPA
-- H2 in-memory database
+- PostgreSQL
+- Flyway database migrations
+- Docker Compose
 - Maven
 
 ## Run
 
+Start the API and PostgreSQL together:
+
 ```bash
-mvn spring-boot:run
+docker compose up -d
 ```
 
 The API starts at:
 
 ```text
-http://localhost:8080
+http://localhost:8081
 ```
 
 Swagger API docs:
 
 ```text
-http://localhost:8080/swagger-ui/index.html
+http://localhost:8081/swagger-ui/index.html
 ```
 
-H2 console:
+PostgreSQL is exposed locally on:
 
 ```text
-http://localhost:8080/h2-console
+localhost:15432
 ```
 
-Use JDBC URL:
+Connect to PostgreSQL in Docker:
 
-```text
-jdbc:h2:mem:minipay
+```bash
+docker exec -it minipay-postgres psql -U minipay -d minipay
+```
+
+Stop the app and database:
+
+```bash
+docker compose down
+```
+
+Run the API locally without Dockerizing the Java app:
+
+```bash
+docker compose up -d postgres
+mvn spring-boot:run
+```
+
+Useful SQL inside `psql`:
+
+```sql
+SELECT * FROM users;
+SELECT * FROM wallets;
+SELECT * FROM transactions;
 ```
 
 ## Example Requests
@@ -48,15 +73,15 @@ jdbc:h2:mem:minipay
 Create a user:
 
 ```bash
-curl -X POST http://localhost:8080/api/users \
+curl -X POST http://localhost:8081/api/users \
   -H "Content-Type: application/json" \
-  -d '{"name":"Amina","email":"amina@example.com"}'
+  -d '{"name":"New","email":"new@example.com"}'
 ```
 
 Deposit money:
 
 ```bash
-curl -X POST http://localhost:8080/api/wallets/1/deposit \
+curl -X POST http://localhost:8081/api/wallets/1/deposit \
   -H "Content-Type: application/json" \
   -d '{"amount":100.00}'
 ```
@@ -64,7 +89,7 @@ curl -X POST http://localhost:8080/api/wallets/1/deposit \
 Transfer money:
 
 ```bash
-curl -X POST http://localhost:8080/api/wallets/transfer \
+curl -X POST http://localhost:8081/api/wallets/transfer \
   -H "Content-Type: application/json" \
   -d '{"fromUserId":1,"toUserId":2,"amount":25.50}'
 ```
@@ -72,11 +97,11 @@ curl -X POST http://localhost:8080/api/wallets/transfer \
 Check balance:
 
 ```bash
-curl http://localhost:8080/api/wallets/1/balance
+curl http://localhost:8081/api/wallets/1/balance
 ```
 
 View transaction history:
 
 ```bash
-curl http://localhost:8080/api/transactions/users/1
+curl http://localhost:8081/api/transactions/users/1
 ```

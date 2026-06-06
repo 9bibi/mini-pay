@@ -1,0 +1,33 @@
+services:
+  minipay-api:
+    build: .
+    container_name: minipay-api
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/minipay
+      SPRING_DATASOURCE_USERNAME: minipay
+      SPRING_DATASOURCE_PASSWORD: minipay
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16
+    container_name: minipay-postgres
+    environment:
+      POSTGRES_DB: minipay
+      POSTGRES_USER: minipay
+      POSTGRES_PASSWORD: minipay
+    ports:
+      - "15432:5432"
+    volumes:
+      - minipay-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U minipay -d minipay"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  minipay-postgres-data:
