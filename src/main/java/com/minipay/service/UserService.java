@@ -2,7 +2,7 @@ package com.minipay.service;
 
 import com.minipay.dto.CreateUserRequest;
 import com.minipay.dto.UserResponse;
-import com.minipay.exception.BadRequestException;
+import com.minipay.exception.DuplicateEmailException;
 import com.minipay.model.User;
 import com.minipay.model.Wallet;
 import com.minipay.repository.UserRepository;
@@ -22,7 +22,7 @@ public class UserService {
     public UserResponse createUser(CreateUserRequest request) {
         String email = request.email().trim().toLowerCase();
         if (userRepository.existsByEmail(email)) {
-            throw new BadRequestException("Email is already registered");
+            throw new DuplicateEmailException("Email is already registered");
         }
 
         User user = new User(request.name().trim(), email);

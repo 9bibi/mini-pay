@@ -6,6 +6,7 @@ import com.minipay.dto.TransferRequest;
 import com.minipay.dto.WalletResponse;
 import com.minipay.service.WalletService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,7 +25,7 @@ public class WalletController {
     }
 
     @PostMapping("/{userId}/deposit")
-    public TransactionResponse deposit(@PathVariable Long userId, @Valid @RequestBody DepositRequest request) {
+    public TransactionResponse deposit(@PathVariable @Positive Long userId, @Valid @RequestBody DepositRequest request) {
         return walletService.deposit(userId, request.amount());
     }
 
@@ -34,7 +35,7 @@ public class WalletController {
     }
 
     @GetMapping("/{userId}/balance")
-    public WalletResponse balance(@PathVariable Long userId) {
+    public WalletResponse balance(@PathVariable @Positive Long userId) {
         return walletService.getBalance(userId);
     }
 }

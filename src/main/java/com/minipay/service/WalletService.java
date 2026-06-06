@@ -3,7 +3,9 @@ package com.minipay.service;
 import com.minipay.dto.TransactionResponse;
 import com.minipay.dto.WalletResponse;
 import com.minipay.exception.BadRequestException;
-import com.minipay.exception.ResourceNotFoundException;
+import com.minipay.exception.InsufficientFundsException;
+import com.minipay.exception.SameWalletTransferException;
+import com.minipay.exception.WalletNotFoundException;
 import com.minipay.model.Transaction;
 import com.minipay.model.TransactionStatus;
 import com.minipay.model.TransactionType;
@@ -48,17 +50,19 @@ public class WalletService {
         return TransactionResponse.from(transactionRepository.save(transaction));
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = {InsufficientFundsException.class, SameWalletTransferException.class})
     public TransactionResponse transfer(Long fromUserId, Long toUserId, BigDecimal amount) {
         if (fromUserId.equals(toUserId)) {
-            return saveFailedTransfer(fromUserId, toUserId, amount, "Cannot transfer money to the same wallet");
+            saveFailedTransfer(fromUserId, toUserId, amount, "Cannot transfer money to the same wallet");
+            throw new SameWalletTransferException("Cannot transfer money to the same wallet");
         }
 
         Wallet fromWallet = findWalletByUserId(fromUserId);
         Wallet toWallet = findWalletByUserId(toUserId);
 
         if (fromWallet.getBalance().compareTo(amount) < 0) {
-            return saveFailedTransfer(fromUserId, toUserId, amount, "Insufficient balance");
+            saveFailedTransfer(fromUserId, toUserId, amount, "Insufficient balance");
+            throw new InsufficientFundsException("Insufficient balance");
         }
 
         fromWallet.withdraw(amount);
@@ -95,6 +99,6 @@ public class WalletService {
             throw new BadRequestException("User id is required");
         }
         return walletRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Wallet not found for user id " + userId));
+                .orElseThrow(() -> new WalletNotFoundException("Wallet not found for user id " + userId));
     }
 }

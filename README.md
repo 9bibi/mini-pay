@@ -1,71 +1,84 @@
 # MiniPay
 
-MiniPay is a simple Java Spring Boot digital wallet API. It lets you create users,
-deposit money, transfer money between wallets, check balances, and view transaction
-history.
+MiniPay is a Java Spring Boot digital wallet API. It supports user wallets,
+deposits, transfers, balances, and transaction history.
 
-## Stack
+## Tech Stack
 
 - Java 17
 - Spring Boot 3
 - Spring Web
 - Spring Data JPA
 - PostgreSQL
-- Flyway database migrations
+- Flyway
 - Docker Compose
 - Maven
+- Swagger/OpenAPI
+- JUnit, MockMvc, H2 test profile
+
+## Features
+
+- Create users with wallets
+- Deposit money
+- Transfer money between wallets
+- View balances and transaction history
+- Validate request DTOs
+- Handle API errors with custom exceptions
+- Run API and PostgreSQL with Docker Compose
+- Manage database schema with Flyway migrations
 
 ## Run
 
-Start the API and PostgreSQL together:
+Start the API and PostgreSQL:
 
 ```bash
 docker compose up -d
 ```
 
-The API starts at:
+API:
 
 ```text
 http://localhost:8081
 ```
 
-Swagger API docs:
+Swagger:
 
 ```text
 http://localhost:8081/swagger-ui/index.html
 ```
 
-PostgreSQL is exposed locally on:
-
-```text
-localhost:15432
-```
-
-Connect to PostgreSQL in Docker:
-
-```bash
-docker exec -it minipay-postgres psql -U minipay -d minipay
-```
-
-Stop the app and database:
+Stop containers:
 
 ```bash
 docker compose down
 ```
 
-Run the API locally without Dockerizing the Java app:
+## Database
 
-```bash
-docker compose up -d postgres
-mvn spring-boot:run
+PostgreSQL is exposed on:
+
+```text
+localhost:15432
 ```
 
-Useful SQL inside `psql`:
+Connect with `psql`:
+
+```bash
+docker exec -it minipay-postgres psql -U minipay -d minipay
+```
+
+Example queries:
 
 ```sql
 SELECT * FROM users;
 SELECT * FROM wallets;
 SELECT * FROM transactions;
+```
+
+## Tests
+
+```bash
+mvn test
 ```
 
 ## Example Requests
@@ -75,7 +88,7 @@ Create a user:
 ```bash
 curl -X POST http://localhost:8081/api/users \
   -H "Content-Type: application/json" \
-  -d '{"name":"New","email":"new@example.com"}'
+  -d '{"name":"Raven","email":"raven@example.com"}'
 ```
 
 Deposit money:
@@ -98,10 +111,4 @@ Check balance:
 
 ```bash
 curl http://localhost:8081/api/wallets/1/balance
-```
-
-View transaction history:
-
-```bash
-curl http://localhost:8081/api/transactions/users/1
 ```
