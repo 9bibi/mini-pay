@@ -1,12 +1,12 @@
 package com.minipay.dto;
 
-import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import java.math.BigDecimal;
 
 public record TransferRequest(
-        @NotNull Long fromUserId,
-        @NotNull Long toUserId,
-        @NotNull @DecimalMin(value = "0.01") BigDecimal amount
+        @NotNull @Positive Long fromUserId,
+        @NotNull @Positive Long toUserId,
+        @NotNull @Positive BigDecimal amount
 ) {
 }
