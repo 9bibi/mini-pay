@@ -14,6 +14,7 @@ deposits, transfers, balances, and transaction history.
 - Docker Compose
 - Maven
 - Swagger/OpenAPI
+- GitHub Actions
 - JUnit, MockMvc, H2 test profile
 
 ## Features
@@ -29,6 +30,7 @@ deposits, transfers, balances, and transaction history.
 - Protect payment data with database constraints
 - Prevent duplicate payment retries with idempotency keys
 - Expose health status with Spring Boot Actuator
+- Run CI tests against PostgreSQL with GitHub Actions
 
 ## Run
 
@@ -86,9 +88,13 @@ SELECT * FROM transactions;
 
 ## Tests
 
+Local tests use the H2 test profile for fast feedback:
+
 ```bash
 mvn test
 ```
+
+GitHub Actions runs the same tests against PostgreSQL.
 
 ## Example Requests
 
