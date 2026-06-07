@@ -11,11 +11,12 @@ deposits, transfers, balances, and transaction history.
 - Spring Data JPA
 - Spring Security
 - PostgreSQL
+- Redis
+- Kafka
 - Flyway
 - Docker Compose
 - Maven
 - Swagger/OpenAPI
-- GitHub Actions
 - JUnit, MockMvc, H2 test profile
 
 ## Features
@@ -31,11 +32,13 @@ deposits, transfers, balances, and transaction history.
 - Manage database schema with Flyway migrations
 - Protect payment data with database constraints
 - Prevent duplicate payment retries with idempotency keys
+- Limit transfer request bursts with Redis
+- Publish successful payment events to Kafka
 - Expose health status with Spring Boot Actuator
 
 ## Run
 
-Start the API and PostgreSQL:
+Start the API, PostgreSQL, Redis, and Kafka:
 
 ```bash
 docker compose up -d
@@ -96,9 +99,25 @@ SELECT * FROM wallets;
 SELECT * FROM transactions;
 ```
 
+## Redis and Kafka
+
+Docker Compose enables Redis-backed rate limiting for transfer requests:
+
+```text
+5 transfer requests per minute per authenticated user
+```
+
+Successful deposits and transfers publish a `PaymentEvent` to Kafka:
+
+```text
+topic: payment-events
+```
+
+Kafka is disabled by default outside Docker so the app can still start without a local broker.
+
 ## Tests
 
-Local tests use the H2 test profile for fast feedback:
+Local tests use the test profile for fast feedback:
 
 ```bash
 mvn test

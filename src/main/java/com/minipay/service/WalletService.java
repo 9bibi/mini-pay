@@ -2,6 +2,8 @@ package com.minipay.service;
 
 import com.minipay.dto.TransactionResponse;
 import com.minipay.dto.WalletResponse;
+import com.minipay.dto.PaymentEvent;
+import com.minipay.event.PaymentEventPublisher;
 import com.minipay.exception.BadRequestException;
 import com.minipay.exception.IdempotencyConflictException;
 import com.minipay.exception.InsufficientFundsException;
@@ -24,6 +26,8 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class WalletService {
@@ -31,12 +35,15 @@ public class WalletService {
     private final WalletRepository walletRepository;
     private final TransactionRepository transactionRepository;
     private final IdempotencyKeyRepository idempotencyKeyRepository;
+    private final PaymentEventPublisher paymentEventPublisher;
 
     public WalletService(WalletRepository walletRepository, TransactionRepository transactionRepository,
-                         IdempotencyKeyRepository idempotencyKeyRepository) {
+                         IdempotencyKeyRepository idempotencyKeyRepository,
+                         PaymentEventPublisher paymentEventPublisher) {
         this.walletRepository = walletRepository;
         this.transactionRepository = transactionRepository;
         this.idempotencyKeyRepository = idempotencyKeyRepository;
+        this.paymentEventPublisher = paymentEventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -69,7 +76,9 @@ public class WalletService {
         );
 
         walletRepository.save(wallet);
-        return TransactionResponse.from(transactionRepository.save(transaction));
+        TransactionResponse response = TransactionResponse.from(transactionRepository.save(transaction));
+        publishAfterCommit(response);
+        return response;
     }
 
     @Transactional(noRollbackFor = {InsufficientFundsException.class, SameWalletTransferException.class})
@@ -111,7 +120,24 @@ public class WalletService {
 
         walletRepository.save(fromWallet);
         walletRepository.save(toWallet);
-        return TransactionResponse.from(transactionRepository.save(transaction));
+        TransactionResponse response = TransactionResponse.from(transactionRepository.save(transaction));
+        publishAfterCommit(response);
+        return response;
+    }
+
+    private void publishAfterCommit(TransactionResponse response) {
+        PaymentEvent event = PaymentEvent.from(response);
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            paymentEventPublisher.publish(event);
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                paymentEventPublisher.publish(event);
+            }
+        });
     }
 
     private TransactionResponse executeIdempotently(String idempotencyKey, String requestHash,
