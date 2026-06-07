@@ -5,6 +5,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.minipay.dto.CreateUserRequest;
+import com.minipay.dto.UserResponse;
+import com.minipay.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -20,6 +23,9 @@ class ApiValidationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private UserService userService;
 
     @Test
     void createUserRejectsBlankEmail() throws Exception {
@@ -116,5 +122,33 @@ class ApiValidationTest {
         mockMvc.perform(get("/api/wallets/999/balance"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Wallet not found for user id 999"));
+    }
+
+    @Test
+    void depositReturnsConflictWhenIdempotencyKeyIsReusedForDifferentRequest() throws Exception {
+        UserResponse user = userService.createUser(
+                new CreateUserRequest("Ida", "ida-idempotency@test.com"));
+
+        mockMvc.perform(post("/api/wallets/{userId}/deposit", user.id())
+                        .header("Idempotency-Key", "api-conflict-key-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "amount": 10.00
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/wallets/{userId}/deposit", user.id())
+                        .header("Idempotency-Key", "api-conflict-key-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "amount": 20.00
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("Idempotency key was already used for a different request"));
     }
 }

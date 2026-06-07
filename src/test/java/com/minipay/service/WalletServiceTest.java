@@ -7,6 +7,7 @@ import com.minipay.dto.CreateUserRequest;
 import com.minipay.dto.TransactionResponse;
 import com.minipay.dto.UserResponse;
 import com.minipay.dto.WalletResponse;
+import com.minipay.exception.IdempotencyConflictException;
 import com.minipay.exception.InsufficientFundsException;
 import com.minipay.exception.SameWalletTransferException;
 import com.minipay.exception.WalletNotFoundException;
@@ -107,5 +108,46 @@ class WalletServiceTest {
         assertThat(history.get(0).getType()).isEqualTo(TransactionType.TRANSFER);
         assertThat(history.get(1).getType()).isEqualTo(TransactionType.DEPOSIT);
         assertThat(history.get(0).getCreatedAt()).isAfterOrEqualTo(history.get(1).getCreatedAt());
+    }
+
+    @Test
+    void depositWithSameIdempotencyKeyRunsOnce() {
+        UserResponse user = userService.createUser(new CreateUserRequest("Lina", "lina@test.com"));
+
+        TransactionResponse firstDeposit = walletService.deposit(user.id(), new BigDecimal("25.00"), "deposit-key-1");
+        TransactionResponse retryDeposit = walletService.deposit(user.id(), new BigDecimal("25.0"), "deposit-key-1");
+
+        assertThat(retryDeposit.id()).isEqualTo(firstDeposit.id());
+        assertThat(walletService.getBalance(user.id()).balance()).isEqualByComparingTo("25.00");
+        assertThat(transactionRepository.findByFromUserIdOrToUserIdOrderByCreatedAtDesc(user.id(), user.id()))
+                .hasSize(1);
+    }
+
+    @Test
+    void transferWithSameIdempotencyKeyRunsOnce() {
+        UserResponse sender = userService.createUser(new CreateUserRequest("Arman", "arman@test.com"));
+        UserResponse receiver = userService.createUser(new CreateUserRequest("Maya", "maya@test.com"));
+        walletService.deposit(sender.id(), new BigDecimal("100.00"));
+
+        TransactionResponse firstTransfer = walletService.transfer(
+                sender.id(), receiver.id(), new BigDecimal("30.00"), "transfer-key-1");
+        TransactionResponse retryTransfer = walletService.transfer(
+                sender.id(), receiver.id(), new BigDecimal("30.0"), "transfer-key-1");
+
+        assertThat(retryTransfer.id()).isEqualTo(firstTransfer.id());
+        assertThat(walletService.getBalance(sender.id()).balance()).isEqualByComparingTo("70.00");
+        assertThat(walletService.getBalance(receiver.id()).balance()).isEqualByComparingTo("30.00");
+    }
+
+    @Test
+    void sameIdempotencyKeyCannotBeUsedForDifferentRequest() {
+        UserResponse user = userService.createUser(new CreateUserRequest("Nika", "nika@test.com"));
+
+        walletService.deposit(user.id(), new BigDecimal("10.00"), "conflict-key-1");
+
+        assertThatThrownBy(() -> walletService.deposit(user.id(), new BigDecimal("15.00"), "conflict-key-1"))
+                .isInstanceOf(IdempotencyConflictException.class)
+                .hasMessage("Idempotency key was already used for a different request");
+        assertThat(walletService.getBalance(user.id()).balance()).isEqualByComparingTo("10.00");
     }
 }

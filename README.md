@@ -27,6 +27,7 @@ deposits, transfers, balances, and transaction history.
 - Run API and PostgreSQL with Docker Compose
 - Manage database schema with Flyway migrations
 - Protect payment data with database constraints
+- Prevent duplicate payment retries with idempotency keys
 - Expose health status with Spring Boot Actuator
 
 ## Run
@@ -103,6 +104,7 @@ Deposit money:
 
 ```bash
 curl -X POST http://localhost:8081/api/wallets/1/deposit \
+  -H "Idempotency-Key: deposit-demo-1" \
   -H "Content-Type: application/json" \
   -d '{"amount":100.00}'
 ```
@@ -111,6 +113,7 @@ Transfer money:
 
 ```bash
 curl -X POST http://localhost:8081/api/wallets/transfer \
+  -H "Idempotency-Key: transfer-demo-1" \
   -H "Content-Type: application/json" \
   -d '{"fromUserId":1,"toUserId":2,"amount":25.50}'
 ```
