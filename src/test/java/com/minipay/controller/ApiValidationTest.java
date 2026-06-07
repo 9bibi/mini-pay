@@ -13,12 +13,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@WithMockUser(username = "minipay")
 class ApiValidationTest {
 
     @Autowired
@@ -122,6 +125,13 @@ class ApiValidationTest {
         mockMvc.perform(get("/api/wallets/999/balance"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Wallet not found for user id 999"));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void apiRequestsRequireAuthentication() throws Exception {
+        mockMvc.perform(get("/api/wallets/1/balance"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

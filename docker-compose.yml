@@ -6,6 +6,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/minipay
       SPRING_DATASOURCE_USERNAME: minipay
       SPRING_DATASOURCE_PASSWORD: minipay
+      MINIPAY_SECURITY_USERNAME: minipay
+      MINIPAY_SECURITY_PASSWORD: minipay
     ports:
       - "8081:8080"
     depends_on:
